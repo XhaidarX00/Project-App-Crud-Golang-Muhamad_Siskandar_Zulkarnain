@@ -3,7 +3,7 @@ package service
 import (
 	model "ProjectCRUD/Model"
 	utils "ProjectCRUD/Utils"
-	view "ProjectCRUD/VIew"
+	view "ProjectCRUD/View"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -116,14 +116,13 @@ func (s *EducationService) CreateStudent() {
 	}
 
 	dataC := utils.ConvertSliceToMap(s.db.Courses)
-	dkC := []string{"CreatedAt", "UpdatedAt"}
-	keysC := utils.GetStructKeys(model.Student{}, dkC)
+	dkC := []string{"CreatedAt", "UpdatedAt", "Activate", "StudentIDs"}
+	keysC := utils.GetStructKeys(model.Course{}, dkC)
 
 	fmt.Print(utils.ColorMessage("yellow", "Masukkan Nama Siswa : "))
 	fmt.Scan(&student.Name)
-	s.DisplayCountIndex("DATA COURSE", dataC, keysC, &student)
-
 	student.ID = fmt.Sprintf("STD%d", len(s.db.Students)+1)
+	s.DisplayCountIndex("DATA COURSE", dataC, keysC, &student)
 	student.CreatedAt = time.Now()
 	student.UpdatedAt = time.Now()
 	s.db.Students = append(s.db.Students, student)
@@ -158,11 +157,12 @@ func (s *EducationService) UpdateStudent() {
 	keys := utils.GetStructKeys(model.Student{}, dk)
 
 	dataC := utils.ConvertSliceToMap(s.db.Courses)
-	dkC := []string{"CreatedAt", "UpdatedAt"}
-	keysC := utils.GetStructKeys(model.Student{}, dkC)
+	dkC := []string{"CreatedAt", "UpdatedAt", "Activate", "StudentIDs"}
+	keysC := utils.GetStructKeys(model.Course{}, dkC)
 
 	for {
-		id = DisplayDataChosenIndexOne("DATA SISWA", data, keys)
+		id = view.DisplayDataChosenIndexOne("DATA SISWA", data, keys)
+		updates.ID = id
 		fmt.Print(utils.ColorMessage("yellow", "Update Nama Baru (skip jika tidak diubah) : "))
 		fmt.Scan(&updates.Name)
 		fmt.Print(utils.ColorMessage("yellow", "Update Course (y / t) : "))
@@ -185,20 +185,28 @@ func (s *EducationService) UpdateStudent() {
 			if strings.ToLower(updates.Name) != "skip" {
 				s.db.Students[i].Name = updates.Name
 			}
+
+			s.db.Students[i].Course = updates.Course
 			s.db.Students[i].UpdatedAt = time.Now()
 			s.saveDatabase()
+			utils.SuccesMessage("Berhasil Update Data Siswa")
 			return
 		}
 	}
 	utils.ErrorMessage("Siswa Tidak Ditemukan Gagal Update!")
 }
 
-func (s *EducationService) DeleteStudent(id string) {
+func (s *EducationService) DeleteStudent() {
+	data := utils.ConvertSliceToMap(s.db.Students)
+	dk := []string{"CreatedAt", "UpdatedAt"}
+	keys := utils.GetStructKeys(model.Student{}, dk)
+	id := view.DisplayDataChosenIndexOne("DATA SISWA", data, keys)
+
 	for i, student := range s.db.Students {
 		if student.ID == id {
 			s.db.Students = append(s.db.Students[:i], s.db.Students[i+1:]...)
 			s.saveDatabase()
-			utils.SuccesMessage("Berhasil Update Data Siswa")
+			utils.SuccesMessage("Berhasil Delete Data Siswa")
 			return
 		}
 	}
@@ -272,15 +280,13 @@ func (s *EducationService) AddStudentToCourse(courseID string, studentID string)
 	utils.ErrorMessage(msg)
 }
 
-func (s *EducationService) GetAllCourses() []model.Course {
+func (s *EducationService) GetAllCourses() {
 	if len(s.db.Courses) == 0 {
 		utils.ErrorMessage("Tidak Ada Course Yang Aktif")
-		return nil
+		return
 	}
 
-	courses := make([]model.Course, len(s.db.Courses))
-	copy(courses, s.db.Courses)
-	return courses
+	view.PrintCourseToJson(s.db.Courses)
 }
 
 // Validation helpers
@@ -322,6 +328,19 @@ func ExitMainmenu() {
 	utils.SuccesMessage("Keluar dari Program\n")
 }
 
+func isScheduleConflict(existingSchedules []model.Schedule, newSchedule model.Schedule) bool {
+	for _, existing := range existingSchedules {
+		for _, newTime := range newSchedule.Schedule {
+			for _, existingTime := range existing.Schedule {
+				if newTime == existingTime && newTime != "" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (s *EducationService) DisplayCountIndex(title string, data []map[string]interface{}, keys []string, student *model.Student) {
 	var input string
 	var tempChoice []string
@@ -330,7 +349,7 @@ func (s *EducationService) DisplayCountIndex(title string, data []map[string]int
 	}()
 
 	for {
-		DisplayData(title, data, keys)
+		view.DisplayData(title, data, keys)
 		fmt.Print(utils.ColorMessage("yellow", "Masukkan Kelas Course atau ketik `done` untuk berhenti : "))
 		fmt.Scan(&input)
 		utils.ClearScreen()
@@ -363,127 +382,59 @@ func (s *EducationService) DisplayCountIndex(title string, data []map[string]int
 
 		msg := fmt.Sprintf("Anda memilih course: %s", utils.ColorMessage("green", selectedCourse.Name))
 		tempChoice = append(tempChoice, msg)
-		displayTempChoice(tempChoice)
+		view.DisplayTempChoice(tempChoice)
 
 		s.AddStudentToCourse(selectedCourse.ID, student.ID)
 	}
 
 }
 
-func isScheduleConflict(existingSchedules []model.Schedule, newSchedule model.Schedule) bool {
-	for _, existing := range existingSchedules {
-		for _, newTime := range newSchedule.Schedule {
-			for _, existingTime := range existing.Schedule {
-				if newTime == existingTime && newTime != "" {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-func DisplayChoise(title string, data []map[string]interface{}, keys []string) []map[string]interface{} {
-	var input string
-	var tempChoice []string
-	var selectedData []map[string]interface{}
-	defer func() {
-		tempChoice = []string{}
-	}()
-
+func (s *EducationService) Menu(ctxwithdeadline context.Context) {
 	for {
-		DisplayData(title, data, keys)
-		fmt.Print(utils.ColorMessage("yellow", "Masukkan Nomor atau ketik 'done' untuk selesai: "))
-		fmt.Scan(&input)
-		utils.ClearScreen()
-
-		if strings.ToLower(input) == "done" {
-			return selectedData
-		}
-
-		intInput, err := strconv.Atoi(input)
-		if err != nil || intInput < 1 || intInput > len(data) {
-			msg := fmt.Sprintf("Input harus berupa angka yang valid dan tidak boleh lebih dari %d\n", len(data))
-			utils.ErrorMessage(msg)
-			continue
-		}
-
-		result := data[intInput-1]
-		selectedData = append(selectedData, result)
-
-		if value, ok := result[keys[0]].(string); ok {
-			msg := fmt.Sprintf("Anda memilih menu: %s", utils.ColorMessage("green", value))
-			tempChoice = append(tempChoice, msg)
-		} else {
-			msg := fmt.Sprintf("Anda memilih menu: %s", utils.ColorMessage("green", fmt.Sprintf("%v", result[keys[0]])))
-			tempChoice = append(tempChoice, msg)
-		}
-
-		displayTempChoice(tempChoice)
-	}
-}
-
-func displayTempChoice(tempChoice []string) {
-	for _, msg := range tempChoice {
-		fmt.Println(msg)
-	}
-}
-
-func DisplayData(title string, data []map[string]interface{}, keys []string) {
-	msg := fmt.Sprintf("\n============== ◉  %s ◉  ==============", title)
-	utils.PrintColorMsg("yellow", msg)
-	fmt.Println(strings.Repeat("-", 50))
-	for i, result := range data {
-		fmt.Printf("%d. ", i+1)
-		for _, key := range keys {
-			value, ok := result[key]
-			if !ok {
-				value = "N/A"
+		select {
+		case <-ctxwithdeadline.Done():
+			utils.ErrorMessage("Akses Ditolak, Sesi Login Expired!")
+			if s.AuthenticateUser() {
+				ctxWithDeadline, cancel := ResetSessionTimeout()
+				defer cancel()
+				ctxwithdeadline = ctxWithDeadline
+				continue
+			} else {
+				utils.ErrorMessage("Terjadi Kesalahan Saat Login! Hubungi Developer untuk Maintance!")
+				ExitMainmenu()
 			}
-			fmt.Printf("%v | ", value)
-		}
-		fmt.Println()
-	}
-	fmt.Println(strings.Repeat("-", 50))
-}
 
-func DisplayDataChosenIndexOne(title string, data []map[string]interface{}, keys []string) string {
-	var id string
+		default:
+			time.Sleep(1 * time.Second)
+			view.DisplayMenu()
 
-	for {
-		msg := fmt.Sprintf("\n============== ◉  %s ◉  ==============", title)
-		utils.PrintColorMsg("yellow", msg)
-		fmt.Println(strings.Repeat("-", 50))
+			var choice int
+			fmt.Scan(&choice)
+			utils.ClearScreen()
 
-		for i, result := range data {
-			fmt.Printf("%d. ", i+1)
-			for _, key := range keys {
-				value, ok := result[key]
-				if !ok {
-					value = "N/A"
-				}
-				fmt.Printf("%v | ", value)
+			switch choice {
+			case 1:
+				s.CreateCourse()
+			case 2:
+				s.GetAllCourses()
+			case 3:
+				s.CreateStudent()
+			case 4:
+				s.GetAllStudents()
+
+			case 5:
+				s.UpdateStudent()
+
+			case 6:
+				s.DeleteStudent()
+
+			case 0:
+				utils.SuccesMessage("Program Selesai dan Semoga hari mu menyenangkan!")
+				ExitMainmenu()
+
+			default:
+				utils.ErrorMessage("Opsi Tidak Valid!")
 			}
-			fmt.Println()
-		}
-
-		fmt.Println(strings.Repeat("-", 50))
-		fmt.Print(utils.ColorMessage("yellow", "Masukkan nomor siswa yang akan diupdate: "))
-		fmt.Scan(&id)
-		utils.ClearScreen()
-
-		intInput, err := strconv.Atoi(id)
-		if err != nil || intInput < 1 || intInput > len(data) {
-			msg := "Input harus berupa angka yang valid dan harus sesuai dengan nomor daftar siswa."
-			utils.ErrorMessage(msg)
-			continue
-		}
-
-		if selectedData, ok := data[intInput-1]["ID"].(string); ok {
-			return selectedData
-		} else {
-			utils.ErrorMessage("ID siswa tidak valid.")
-			continue
 		}
 	}
 }

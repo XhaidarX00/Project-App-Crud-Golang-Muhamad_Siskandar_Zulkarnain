@@ -2,39 +2,40 @@
     "students": [
         {
             "id": "STD1",
-            "name": "Iskandar",
+            "name": "Haidar",
             "course": [
                 {
                     "Course": "Mtk",
                     "schedule": [
                         "senin"
                     ]
+                },
+                {
+                    "Course": "Fisika",
+                    "schedule": [
+                        "minggu"
+                    ]
                 }
             ],
-            "created_at": "2024-10-26T22:33:21.5599887+07:00",
-            "updated_at": "2024-10-26T23:19:39.6893182+07:00"
+            "created_at": "2024-10-27T00:37:55.4088501+07:00",
+            "updated_at": "2024-10-27T00:37:55.4088501+07:00"
         }
     ],
     "courses": [
         {
             "id": "CRS1",
             "name": "Mtk",
-            "teacher": "Haidr",
+            "teacher": "Haidar",
             "credits": 10000,
             "activation": true,
             "student_ids": [
-                "",
-                "",
-                "",
-                "",
-                "",
-                ""
+                "STD1"
             ],
             "schedule": [
                 "senin"
             ],
             "created_at": "2024-10-26T22:33:00.2843753+07:00",
-            "updated_at": "2024-10-26T23:19:26.9734567+07:00"
+            "updated_at": "2024-10-27T00:37:37.3850985+07:00"
         },
         {
             "id": "CRS2",
@@ -43,17 +44,26 @@
             "credits": 100000,
             "activation": true,
             "student_ids": [
-                "",
-                "",
-                "",
-                "",
-                ""
+                "STD1"
             ],
             "schedule": [
                 "minggu"
             ],
             "created_at": "2024-10-26T22:49:47.9309064+07:00",
-            "updated_at": "2024-10-26T23:19:28.5983543+07:00"
+            "updated_at": "2024-10-27T00:37:49.4812051+07:00"
+        },
+        {
+            "id": "CRS3",
+            "name": "Kimia",
+            "teacher": "Hana",
+            "credits": 50000,
+            "activation": true,
+            "student_ids": [],
+            "schedule": [
+                "rabu"
+            ],
+            "created_at": "2024-10-27T00:44:48.0604513+07:00",
+            "updated_at": "2024-10-27T00:44:48.0604513+07:00"
         }
     ],
     "login": [
