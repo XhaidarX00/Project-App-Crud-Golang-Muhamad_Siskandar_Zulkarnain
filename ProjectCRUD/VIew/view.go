@@ -179,6 +179,6 @@ func DisplayMenu() {
 	fmt.Println("4. " + utils.ColorMessage("green", "Lihat Semua Siswa"))
 	fmt.Println("5. " + utils.ColorMessage("green", "Update Data Siswa"))
 	fmt.Println("6. " + utils.ColorMessage("green", "Hapus Siswa"))
-	fmt.Println("0. " + utils.ColorMessage("red", "Keluar"))
+	fmt.Println("999. " + utils.ColorMessage("red", "Keluar"))
 	fmt.Print(utils.ColorMessage("yellow", "Pilih opsi: "))
 }

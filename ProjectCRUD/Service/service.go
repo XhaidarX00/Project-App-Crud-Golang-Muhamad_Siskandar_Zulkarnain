@@ -405,14 +405,19 @@ func (s *EducationService) Menu(ctxwithdeadline context.Context) {
 			}
 
 		default:
-			time.Sleep(1 * time.Second)
 			view.DisplayMenu()
 
-			var choice int
+			var choice string
 			fmt.Scan(&choice)
 			utils.ClearScreen()
 
-			switch choice {
+			intInput, err := strconv.Atoi(choice)
+			if err != nil || intInput < 1 {
+				utils.ErrorMessage(("Input harus berupa angka yang valid dan tidak boleh lebih dari 1 angka"))
+				continue
+			}
+
+			switch intInput {
 			case 1:
 				s.CreateCourse()
 			case 2:
@@ -428,7 +433,7 @@ func (s *EducationService) Menu(ctxwithdeadline context.Context) {
 			case 6:
 				s.DeleteStudent()
 
-			case 0:
+			case 999:
 				utils.SuccesMessage("Program Selesai dan Semoga hari mu menyenangkan!")
 				ExitMainmenu()
 
